@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShredLog</title>
+  <style>
+:root {
+  color-scheme: dark;
+  --bg: #07100d;
+  --panel: #101b17;
+  --panel-2: #15231e;
+  --text: #ecfff7;
+  --muted: #9bb5aa;
+  --line: #24352f;
+  --green: #37d67a;
+  --blue: #4aa3ff;
+  --orange: #ff9e3d;
+  --red: #ff5f57;
+  --shadow: 0 18px 50px rgba(0,0,0,0.35);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #123b2b 0%, var(--bg) 38%, #030504 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app-shell { max-width: 1100px; margin: 0 auto; padding: 18px 16px 96px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.03em; }
+h1 { font-size: clamp(2.1rem, 8vw, 4.5rem); }
+h2 { font-size: 2rem; }
+p { margin: 0; }
+.eyebrow { color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem; }
+.muted, .section-heading p, .disclaimer { color: var(--muted); }
+.view { display: none; }
+.view.active { display: grid; gap: 18px; }
+.hero-card, .panel, .chart-card, .card {
+  background: linear-gradient(145deg, rgba(21,35,30,0.96), rgba(12,22,18,0.96));
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.hero-card { padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.panel, .chart-card { padding: 20px; }
+.grid { display: grid; gap: 12px; }
+.cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card { padding: 16px; min-height: 94px; display: flex; flex-direction: column; justify-content: space-between; }
+.card span { color: var(--muted); font-size: 0.9rem; }
+.card strong { font-size: 1.45rem; }
+.compact .card { min-height: 78px; }
+.split-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+form { display: grid; gap: 14px; }
+label { display: grid; gap: 7px; color: var(--muted); font-size: 0.95rem; }
+input, select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #07100d;
+  color: var(--text);
+  padding: 15px 16px;
+  font-size: 1.05rem;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(55,214,122,0.16); }
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 18px;
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+button:hover { transform: translateY(-1px); }
+.primary-btn { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.secondary-btn { background: linear-gradient(135deg, var(--blue), #2468d8); }
+.danger-btn { background: linear-gradient(135deg, var(--red), #c53030); }
+.ghost-btn { background: rgba(255,255,255,0.08); border: 1px solid var(--line); }
+.section-heading { display: grid; gap: 4px; }
+.row-heading { display: flex; justify-content: space-between; align-items: end; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 680px; }
+th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
+td button { padding: 8px 11px; margin-right: 6px; font-size: .85rem; }
+.action-panel { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.file-import { border: 1px dashed var(--line); border-radius: 18px; padding: 12px 14px; cursor: pointer; }
+.file-import input { margin-top: 8px; padding: 10px; }
+.disclaimer { font-size: .9rem; padding: 0 6px; }
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: min(720px, calc(100% - 24px));
+  background: rgba(7,16,13,0.88);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+  border-radius: 26px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  box-shadow: var(--shadow);
+}
+.nav-btn { padding: 12px 6px; font-size: .78rem; background: transparent; color: var(--muted); }
+.nav-btn.active { background: var(--panel-2); color: var(--green); }
+dialog { border: 0; border-radius: 22px; padding: 0; background: transparent; color: var(--text); }
+dialog::backdrop { background: rgba(0,0,0,0.7); }
+.dialog-card { width: min(420px, 92vw); padding: 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+canvas { max-height: 360px; }
+.positive { color: var(--green); }
+.warning { color: var(--orange); }
+.danger { color: var(--red); }
+
+.chart-builder { display: grid; gap: 14px; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.metric-check { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,0.04); color: var(--text); }
+.metric-check input { width: auto; padding: 0; }
+.axis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.custom-chart-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.custom-chart-header p { color: var(--muted); margin-top: 4px; }
+.chart-card canvas { min-height: 280px; }
+
+@media (max-width: 760px) {
+  .topbar, .hero-card { align-items: stretch; flex-direction: column; }
+  .split-grid { grid-template-columns: 1fr; }
+  .cards-grid { grid-template-columns: 1fr 1fr; }
+  .metric-grid, .axis-grid { grid-template-columns: 1fr; }
+  .card { min-height: 82px; padding: 14px; }
+  .card strong { font-size: 1.2rem; }
+  .bottom-nav { border-radius: 20px; }
+  .nav-btn { font-size: .68rem; padding: 10px 2px; }
+}
+
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Macro & Fat Loss Tracker</p>
+        <h1>ShredLog</h1>
+      </div>
+      <button id="seedDataBtn" class="ghost-btn">Load sample data</button>
+    </header>
+
+    <main>
+      <section id="dashboard" class="view active">
+        <div class="hero-card">
+          <div>
+            <p class="eyebrow">Current Period</p>
+            <h2 id="periodTitle">No active period</h2>
+            <p id="periodSubtitle" class="muted">Start a period to begin tracking fat-loss progress.</p>
+          </div>
+          <button class="primary-btn" data-nav="periods">Manage period</button>
+        </div>
+
+        <div class="grid cards-grid">
+          <article class="card"><span>Today Calories</span><strong id="todayCalories">—</strong></article>
+          <article class="card"><span>Protein</span><strong id="todayProtein">—</strong></article>
+          <article class="card"><span>Carbs</span><strong id="todayCarbs">—</strong></article>
+          <article class="card"><span>Fat</span><strong id="todayFat">—</strong></article>
+          <article class="card"><span>7-Day Avg Calories</span><strong id="avg7Calories">—</strong></article>
+          <article class="card"><span>Period Avg Calories</span><strong id="periodAvgCalories">—</strong></article>
+          <article class="card"><span>Total Deficit</span><strong id="totalDeficit">—</strong></article>
+          <article class="card"><span>Estimated Fat Loss</span><strong id="estimatedFatLoss">—</strong></article>
+          <article class="card"><span>Latest Weight</span><strong id="latestWeight">—</strong></article>
+          <article class="card"><span>Estimated Body Fat</span><strong id="estimatedBodyFat">—</strong></article>
+        </div>
+
+        <div class="chart-card">
+          <div class="section-heading">
+            <h3>Progress</h3>
+            <p>Calories, weight, and estimated body-fat percentage.</p>
+          </div>
+          <canvas id="dashboardChart"></canvas>
+        </div>
+
+        <p class="disclaimer">Disclaimer: fat-loss and body-fat calculations are estimates only. Real body weight changes include water, glycogen, food volume, and measurement error.</p>
+      </section>
+
+      <section id="log" class="view">
+        <div class="section-heading">
+          <h2>Log</h2>
+          <p>Enter daily macros, weight, and body-fat measurements.</p>
+        </div>
+
+        <div class="split-grid">
+          <form id="macroForm" class="panel">
+            <h3>Daily Macro Log</h3>
+            <label>Date<input type="date" id="macroDate" required /></label>
+            <label>Calories<input type="number" id="calories" inputmode="decimal" step="0.1" min="0" required /></label>
+            <label>Protein (g)<input type="number" id="protein" inputmode="decimal" step="0.1" min="0" required /></label>
+            <label>Carbs (g)<input type="number" id="carbs" inputmode="decimal" step="0.1" min="0" required /></label>
+            <label>Fat (g)<input type="number" id="fat" inputmode="decimal" step="0.1" min="0" required /></label>
+            <button class="primary-btn" type="submit">Save macros</button>
+          </form>
+
+          <form id="bodyForm" class="panel">
+            <h3>Body Metrics</h3>
+            <label>Date<input type="date" id="bodyDate" required /></label>
+            <label>Weight<input type="number" id="weight" inputmode="decimal" step="0.1" min="0" /></label>
+            <label>Estimated body fat %<input type="number" id="bodyFat" inputmode="decimal" step="0.1" min="0" max="100" /></label>
+            <button class="primary-btn" type="submit">Save body metrics</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="section-heading row-heading">
+            <div>
+              <h3>Macro History</h3>
+              <p>Edit by selecting a row, or delete entries you no longer need.</p>
+            </div>
+          </div>
+          <div class="table-wrap"><table id="macroTable"></table></div>
+        </div>
+      </section>
+
+      <section id="progress" class="view">
+        <div class="section-heading">
+          <h2>Progress</h2>
+          <p>Review rolling averages and estimated fat-loss trends.</p>
+        </div>
+        <div class="chart-card"><canvas id="macroChart"></canvas></div>
+        <div class="chart-card"><canvas id="bodyChart"></canvas></div>
+
+        <form id="chartForm" class="panel chart-builder">
+          <div class="section-heading">
+            <h3>Create Custom Chart</h3>
+            <p>Select what you want to track. The x-axis is always date. Use the date range and y-axis limits to scale the chart.</p>
+          </div>
+          <label>Chart name<input type="text" id="chartTitle" placeholder="Example: Calories vs weight" required /></label>
+          <div class="metric-grid" id="metricOptions"></div>
+          <div class="axis-grid">
+            <label>X-axis start date<input type="date" id="chartStartDate" /></label>
+            <label>X-axis end date<input type="date" id="chartEndDate" /></label>
+            <label>Y-axis unit label<input type="text" id="chartYUnit" placeholder="Example: kcal, g, kg, %, mixed" /></label>
+            <label>Y-axis minimum<input type="number" id="chartYMin" inputmode="decimal" step="0.1" /></label>
+            <label>Y-axis maximum<input type="number" id="chartYMax" inputmode="decimal" step="0.1" /></label>
+          </div>
+          <button class="primary-btn" type="submit">Add chart</button>
+        </form>
+
+        <div id="customCharts" class="grid"></div>
+
+        <div class="panel">
+          <h3>7-Day Averages</h3>
+          <div class="grid cards-grid compact">
+            <article class="card"><span>Calories</span><strong id="sevenCalories">—</strong></article>
+            <article class="card"><span>Protein</span><strong id="sevenProtein">—</strong></article>
+            <article class="card"><span>Carbs</span><strong id="sevenCarbs">—</strong></article>
+            <article class="card"><span>Fat</span><strong id="sevenFat">—</strong></article>
+            <article class="card"><span>Deficit / Surplus</span><strong id="sevenDeficit">—</strong></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="periods" class="view">
+        <div class="section-heading">
+          <h2>Periods</h2>
+          <p>Start a new fat-loss period and review archived periods.</p>
+        </div>
+        <form id="periodForm" class="panel">
+          <h3>Start New Period</h3>
+          <label>Start date<input type="date" id="periodStartDate" required /></label>
+          <label>Starting weight<input type="number" id="startWeight" inputmode="decimal" step="0.1" min="0" required /></label>
+          <label>Starting body fat %<input type="number" id="startBodyFat" inputmode="decimal" step="0.1" min="0" max="100" required /></label>
+          <label>Maintenance calories snapshot<input type="number" id="periodMaintenance" inputmode="decimal" step="0.1" min="0" required /></label>
+          <button class="primary-btn" type="submit">Start period</button>
+        </form>
+        <div class="panel">
+          <h3>Period History</h3>
+          <div class="table-wrap"><table id="periodTable"></table></div>
+        </div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="section-heading">
+          <h2>Settings</h2>
+          <p>Adjust your profile, export your data, or reset the app.</p>
+        </div>
+        <form id="settingsForm" class="panel">
+          <h3>User Profile</h3>
+          <label>Maintenance calories<input type="number" id="maintenanceCalories" inputmode="decimal" step="0.1" min="0" required /></label>
+          <label>Units
+            <select id="units">
+              <option value="lb">Pounds</option>
+              <option value="kg">Kilograms</option>
+            </select>
+          </label>
+          <button class="primary-btn" type="submit">Save settings</button>
+        </form>
+        <div class="panel action-panel">
+          <button id="exportBtn" class="secondary-btn">Export CSV</button>
+          <button id="exportJsonBtn" class="secondary-btn">Export Backup JSON</button>
+          <label class="file-import">Import CSV or JSON
+            <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" />
+          </label>
+          <button id="resetBtn" class="danger-btn">Reset app data</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-nav="dashboard">Dashboard</button>
+      <button class="nav-btn" data-nav="log">Log</button>
+      <button class="nav-btn" data-nav="progress">Progress</button>
+      <button class="nav-btn" data-nav="periods">Periods</button>
+      <button class="nav-btn" data-nav="settings">Settings</button>
+    </nav>
+  </div>
+
+  <dialog id="confirmDialog">
+    <form method="dialog" class="dialog-card">
+      <h3 id="dialogTitle">Update existing log?</h3>
+      <p id="dialogText">A macro log already exists for this date.</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="ghost-btn">Cancel</button>
+        <button value="confirm" class="primary-btn">Update</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+const STORAGE_KEY = 'shredlog.v1';
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const uid = () => crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+
+let state = loadState();
+let charts = {};
+
+const chartMetrics = [
+  { key: 'calories', label: 'Calories', unit: 'kcal' },
+  { key: 'protein', label: 'Protein', unit: 'g' },
+  { key: 'carbs', label: 'Carbs', unit: 'g' },
+  { key: 'fat', label: 'Fat', unit: 'g' },
+  { key: 'deficit', label: 'Daily deficit / surplus', unit: 'kcal' },
+  { key: 'cumulativeDeficit', label: 'Cumulative deficit / surplus', unit: 'kcal' },
+  { key: 'estimatedFatLoss', label: 'Estimated fat loss', unit: () => unitLabel() },
+  { key: 'weight', label: 'Weight', unit: () => unitLabel() },
+  { key: 'enteredBF', label: 'Entered body fat', unit: '%' },
+  { key: 'estimatedBF', label: 'Estimated body fat', unit: '%' }
+];
+
+function defaultState() {
+  return {
+    profile: { maintenanceCalories: 2400, units: 'lb' },
+    macroLogs: [],
+    weightLogs: [],
+    bodyFatLogs: [],
+    periods: [],
+    chartConfigs: []
+  };
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : defaultState();
+  } catch {
+    return defaultState();
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  renderAll();
+}
+
+function parseNum(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function roundToOneDecimal(value) {
+  const n = parseNum(value);
+  return Math.round(n * 10) / 10;
+}
+
+function formatNum(n, decimals = 1) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—';
+  return Number(n).toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+}
+
+function unitLabel() { return state.profile.units; }
+function weightToPounds(weight) { return state.profile.units === 'kg' ? weight * 2.2046226218 : weight; }
+function poundsToUnit(lb) { return state.profile.units === 'kg' ? lb / 2.2046226218 : lb; }
+function caloriesPerUnitFat() { return state.profile.units === 'kg' ? 7700 : 3500; }
+
+function dateDiffDays(start, end) {
+  const a = new Date(`${start}T00:00:00`);
+  const b = new Date(`${end}T00:00:00`);
+  return Math.floor((b - a) / 86400000) + 1;
+}
+
+function sortedByDate(items) {
+  return [...items].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function activePeriod() {
+  return state.periods.find(p => !p.endDate) || null;
+}
+
+function logsForPeriod(period) {
+  if (!period) return [];
+  return sortedByDate(state.macroLogs.filter(l => l.date >= period.startDate && (!period.endDate || l.date <= period.endDate)));
+}
+
+function latestOnOrBefore(items, date = todayISO()) {
+  return sortedByDate(items.filter(i => i.date <= date)).at(-1) || null;
+}
+
+function rolling7Logs() {
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  const startISO = start.toISOString().slice(0, 10);
+  return state.macroLogs.filter(l => l.date >= startISO && l.date <= todayISO());
+}
+
+function average(logs, key) {
+  if (!logs.length) return null;
+  return logs.reduce((sum, log) => sum + Number(log[key] || 0), 0) / logs.length;
+}
+
+function deficitForLog(log, period = activePeriod()) {
+  const maintenance = period?.maintenanceCaloriesSnapshot || state.profile.maintenanceCalories;
+  return maintenance - Number(log.calories || 0);
+}
+
+function cumulativeDeficit(period) {
+  return logsForPeriod(period).reduce((sum, log) => sum + deficitForLog(log, period), 0);
+}
+
+function estimatedFatLoss(period) {
+  if (!period) return null;
+  return cumulativeDeficit(period) / caloriesPerUnitFat();
+}
+
+function estimatedBodyFatPercent(period) {
+  if (!period) return null;
+  const latestWeight = latestOnOrBefore(state.weightLogs)?.weight;
+  if (!latestWeight) return null;
+  const startingFatMass = Number(period.startWeight) * (Number(period.startBodyFatPercentage) / 100);
+  const estimatedCurrentFatMass = Math.max(0, startingFatMass - estimatedFatLoss(period));
+  return (estimatedCurrentFatMass / latestWeight) * 100;
+}
+
+function setText(id, value, className = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = value;
+  el.className = className;
+}
+
+function renderDashboard() {
+  const period = activePeriod();
+  const todayLog = state.macroLogs.find(l => l.date === todayISO());
+  const periodLogs = logsForPeriod(period);
+  const sevenLogs = rolling7Logs();
+  const deficit = period ? cumulativeDeficit(period) : null;
+  const fatLoss = period ? estimatedFatLoss(period) : null;
+  const latestWeight = latestOnOrBefore(state.weightLogs);
+  const bfEstimate = estimatedBodyFatPercent(period);
+
+  setText('periodTitle', period ? `Started ${period.startDate}` : 'No active period');
+  setText('periodSubtitle', period ? `${dateDiffDays(period.startDate, todayISO())} days tracked • ${period.maintenanceCaloriesSnapshot} kcal maintenance snapshot` : 'Start a period to begin tracking fat-loss progress.');
+  setText('todayCalories', todayLog ? `${formatNum(todayLog.calories)} kcal` : '—');
+  setText('todayProtein', todayLog ? `${formatNum(todayLog.protein)} g` : '—');
+  setText('todayCarbs', todayLog ? `${formatNum(todayLog.carbs)} g` : '—');
+  setText('todayFat', todayLog ? `${formatNum(todayLog.fat)} g` : '—');
+  setText('avg7Calories', average(sevenLogs, 'calories') ? `${formatNum(average(sevenLogs, 'calories'))} kcal` : '—');
+  setText('periodAvgCalories', average(periodLogs, 'calories') ? `${formatNum(average(periodLogs, 'calories'))} kcal` : '—');
+  setText('totalDeficit', deficit !== null ? `${formatNum(deficit)} kcal` : '—', deficit >= 0 ? 'positive' : 'warning');
+  setText('estimatedFatLoss', fatLoss !== null ? `${formatNum(fatLoss, 1)} ${unitLabel()}` : '—', fatLoss >= 0 ? 'positive' : 'warning');
+  setText('latestWeight', latestWeight ? `${formatNum(latestWeight.weight, 1)} ${unitLabel()}` : '—');
+  setText('estimatedBodyFat', bfEstimate ? `${formatNum(bfEstimate, 1)}%` : '—');
+  renderDashboardChart(period);
+}
+
+function metricUnit(metric) {
+  const unit = chartMetrics.find(m => m.key === metric)?.unit;
+  return typeof unit === 'function' ? unit() : (unit || '');
+}
+
+function allDataDates() {
+  return [...new Set([
+    ...state.macroLogs.map(l => l.date),
+    ...state.weightLogs.map(l => l.date),
+    ...state.bodyFatLogs.map(l => l.date)
+  ])].sort();
+}
+
+function valueForMetric(metric, date) {
+  const period = activePeriod();
+  const macro = state.macroLogs.find(l => l.date === date);
+  if (metric === 'calories') return macro?.calories ?? null;
+  if (metric === 'protein') return macro?.protein ?? null;
+  if (metric === 'carbs') return macro?.carbs ?? null;
+  if (metric === 'fat') return macro?.fat ?? null;
+  if (metric === 'deficit') return macro ? deficitForLog(macro, period) : null;
+  if (metric === 'weight') return latestOnOrBefore(state.weightLogs, date)?.weight ?? null;
+  if (metric === 'enteredBF') return latestOnOrBefore(state.bodyFatLogs, date)?.bodyFatPercentage ?? null;
+  if (metric === 'cumulativeDeficit') {
+    if (!period || date < period.startDate) return null;
+    return logsForPeriod(period).filter(l => l.date <= date).reduce((sum, l) => sum + deficitForLog(l, period), 0);
+  }
+  if (metric === 'estimatedFatLoss') {
+    const def = valueForMetric('cumulativeDeficit', date);
+    return def === null ? null : def / caloriesPerUnitFat();
+  }
+  if (metric === 'estimatedBF') {
+    if (!period || date < period.startDate) return null;
+    const w = latestOnOrBefore(state.weightLogs, date)?.weight;
+    if (!w) return null;
+    const def = valueForMetric('cumulativeDeficit', date) || 0;
+    const startFat = period.startWeight * (period.startBodyFatPercentage / 100);
+    return (Math.max(0, startFat - def / caloriesPerUnitFat()) / w) * 100;
+  }
+  return null;
+}
+
+function renderMetricOptions() {
+  const wrap = document.getElementById('metricOptions');
+  if (!wrap || wrap.childElementCount) return;
+  wrap.innerHTML = chartMetrics.map(m => `
+    <label class="metric-check"><input type="checkbox" name="chartMetric" value="${m.key}" /> ${m.label} <span class="muted">(${typeof m.unit === 'function' ? m.unit() : m.unit})</span></label>
+  `).join('');
+}
+
+function renderCustomCharts() {
+  const container = document.getElementById('customCharts');
+  if (!container) return;
+  const configs = state.chartConfigs || [];
+  Object.keys(charts).filter(name => name.startsWith('custom-')).forEach(destroyChart);
+  if (!configs.length) {
+    container.innerHTML = '<div class="panel"><h3>No custom charts yet</h3><p class="muted">Create a chart above and it will be saved here.</p></div>';
+    return;
+  }
+  container.innerHTML = configs.map(config => `
+    <div class="chart-card">
+      <div class="custom-chart-header">
+        <div><h3>${config.title}</h3><p>${(config.metrics || []).map(m => chartMetrics.find(x => x.key === m)?.label || m).join(' • ')}</p></div>
+        <button class="danger-btn" onclick="deleteCustomChart('${config.id}')">Delete</button>
+      </div>
+      <canvas id="customChart-${config.id}"></canvas>
+    </div>
+  `).join('');
+  configs.forEach(renderCustomChart);
+}
+
+function renderCustomChart(config) {
+  const ctx = document.getElementById(`customChart-${config.id}`);
+  if (!ctx) return;
+  let dates = allDataDates();
+  if (config.startDate) dates = dates.filter(d => d >= config.startDate);
+  if (config.endDate) dates = dates.filter(d => d <= config.endDate);
+  const datasets = (config.metrics || []).map(metric => {
+    const meta = chartMetrics.find(m => m.key === metric);
+    const unit = metricUnit(metric);
+    return {
+      label: `${meta?.label || metric}${unit ? ` (${unit})` : ''}`,
+      data: dates.map(d => valueForMetric(metric, d)),
+      yAxisID: 'y'
+    };
+  });
+  const options = lineChartConfig(dates, datasets, config.yUnit || '');
+  if (config.yMin !== '' && config.yMin !== null && config.yMin !== undefined) options.options.scales.y.min = Number(config.yMin);
+  if (config.yMax !== '' && config.yMax !== null && config.yMax !== undefined) options.options.scales.y.max = Number(config.yMax);
+  options.options.plugins.legend.display = true;
+  charts[`custom-${config.id}`] = new Chart(ctx, options);
+}
+
+function addCustomChart(event) {
+  event.preventDefault();
+  const metrics = [...document.querySelectorAll('input[name="chartMetric"]:checked')].map(i => i.value);
+  if (!metrics.length) { alert('Choose at least one item to track.'); return; }
+  const yMin = document.getElementById('chartYMin').value;
+  const yMax = document.getElementById('chartYMax').value;
+  if (yMin !== '' && yMax !== '' && Number(yMin) >= Number(yMax)) { alert('Y-axis minimum must be lower than the maximum.'); return; }
+  state.chartConfigs = state.chartConfigs || [];
+  state.chartConfigs.push({
+    id: uid(),
+    title: document.getElementById('chartTitle').value.trim(),
+    metrics,
+    startDate: document.getElementById('chartStartDate').value,
+    endDate: document.getElementById('chartEndDate').value,
+    yUnit: document.getElementById('chartYUnit').value.trim(),
+    yMin: yMin === '' ? null : roundToOneDecimal(yMin),
+    yMax: yMax === '' ? null : roundToOneDecimal(yMax)
+  });
+  event.target.reset();
+  saveState();
+}
+
+async function deleteCustomChart(id) {
+  const ok = await askConfirm('Delete custom chart?', 'The chart will be removed, but your logged data will stay saved.', 'Delete');
+  if (!ok) return;
+  state.chartConfigs = (state.chartConfigs || []).filter(c => c.id !== id);
+  saveState();
+}
+
+function renderProgressStats() {
+  const logs = rolling7Logs();
+  const avgDeficit = logs.length ? logs.reduce((sum, l) => sum + deficitForLog(l), 0) / logs.length : null;
+  setText('sevenCalories', average(logs, 'calories') ? `${formatNum(average(logs, 'calories'))} kcal` : '—');
+  setText('sevenProtein', average(logs, 'protein') ? `${formatNum(average(logs, 'protein'))} g` : '—');
+  setText('sevenCarbs', average(logs, 'carbs') ? `${formatNum(average(logs, 'carbs'))} g` : '—');
+  setText('sevenFat', average(logs, 'fat') ? `${formatNum(average(logs, 'fat'))} g` : '—');
+  setText('sevenDeficit', avgDeficit !== null ? `${formatNum(avgDeficit)} kcal/day` : '—', avgDeficit >= 0 ? 'positive' : 'warning');
+  renderMacroChart();
+  renderBodyChart();
+  renderMetricOptions();
+  renderCustomCharts();
+}
+
+function renderMacroTable() {
+  const table = document.getElementById('macroTable');
+  const rows = sortedByDate(state.macroLogs).reverse().map(log => `
+    <tr>
+      <td>${log.date}</td>
+      <td>${formatNum(log.calories)}</td>
+      <td>${formatNum(log.protein)}</td>
+      <td>${formatNum(log.carbs)}</td>
+      <td>${formatNum(log.fat)}</td>
+      <td>${formatNum(deficitForLog(log))}</td>
+      <td>
+        <button class="ghost-btn" onclick="editMacro('${log.id}')">Edit</button>
+        <button class="danger-btn" onclick="deleteMacro('${log.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+  table.innerHTML = `
+    <thead><tr><th>Date</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>Deficit</th><th>Actions</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7">No macro logs yet.</td></tr>'}</tbody>`;
+}
+
+function renderPeriodTable() {
+  const table = document.getElementById('periodTable');
+  const rows = sortedByDate(state.periods).reverse().map(period => {
+    const deficit = cumulativeDeficit(period);
+    const loss = deficit / caloriesPerUnitFat();
+    return `<tr>
+      <td>${period.startDate}</td>
+      <td>${period.endDate || 'Current'}</td>
+      <td>${formatNum(period.startWeight, 1)} ${unitLabel()}</td>
+      <td>${formatNum(period.startBodyFatPercentage, 1)}%</td>
+      <td>${formatNum(period.maintenanceCaloriesSnapshot)} kcal</td>
+      <td>${formatNum(deficit)} kcal</td>
+      <td>${formatNum(loss, 1)} ${unitLabel()}</td>
+    </tr>`;
+  }).join('');
+  table.innerHTML = `
+    <thead><tr><th>Start</th><th>End</th><th>Start Weight</th><th>Start BF</th><th>Maintenance</th><th>Deficit</th><th>Est. Loss</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="7">No periods yet.</td></tr>'}</tbody>`;
+}
+
+function destroyChart(name) {
+  if (charts[name]) charts[name].destroy();
+}
+
+function renderDashboardChart(period) {
+  const ctx = document.getElementById('dashboardChart');
+  if (!ctx) return;
+  destroyChart('dashboard');
+  const labels = sortedByDate(state.macroLogs).map(l => l.date);
+  const calories = sortedByDate(state.macroLogs).map(l => l.calories);
+  const weights = labels.map(d => latestOnOrBefore(state.weightLogs, d)?.weight ?? null);
+  const bf = labels.map(d => {
+    const p = period;
+    const w = latestOnOrBefore(state.weightLogs, d)?.weight;
+    if (!p || !w) return null;
+    const logsUntilDate = logsForPeriod(p).filter(l => l.date <= d);
+    const def = logsUntilDate.reduce((sum, l) => sum + deficitForLog(l, p), 0);
+    const startFat = p.startWeight * (p.startBodyFatPercentage / 100);
+    return ((Math.max(0, startFat - def / caloriesPerUnitFat())) / w) * 100;
+  });
+  charts.dashboard = new Chart(ctx, lineChartConfig(labels, [
+    { label: 'Calories', data: calories, yAxisID: 'y' },
+    { label: `Weight (${unitLabel()})`, data: weights, yAxisID: 'y1' },
+    { label: 'Estimated BF %', data: bf, yAxisID: 'y1' }
+  ]));
+}
+
+function renderMacroChart() {
+  const ctx = document.getElementById('macroChart');
+  if (!ctx) return;
+  destroyChart('macro');
+  const logs = sortedByDate(state.macroLogs);
+  charts.macro = new Chart(ctx, lineChartConfig(logs.map(l => l.date), [
+    { label: 'Calories', data: logs.map(l => l.calories), yAxisID: 'y' },
+    { label: 'Protein', data: logs.map(l => l.protein), yAxisID: 'y1' },
+    { label: 'Carbs', data: logs.map(l => l.carbs), yAxisID: 'y1' },
+    { label: 'Fat', data: logs.map(l => l.fat), yAxisID: 'y1' }
+  ]));
+}
+
+function renderBodyChart() {
+  const ctx = document.getElementById('bodyChart');
+  if (!ctx) return;
+  destroyChart('body');
+  const dates = [...new Set([...state.weightLogs.map(l => l.date), ...state.bodyFatLogs.map(l => l.date)])].sort();
+  charts.body = new Chart(ctx, lineChartConfig(dates, [
+    { label: `Weight (${unitLabel()})`, data: dates.map(d => latestOnOrBefore(state.weightLogs, d)?.weight ?? null), yAxisID: 'y' },
+    { label: 'Entered BF %', data: dates.map(d => latestOnOrBefore(state.bodyFatLogs, d)?.bodyFatPercentage ?? null), yAxisID: 'y1' }
+  ]));
+}
+
+function lineChartConfig(labels, datasets, yAxisLabel = '') {
+  return {
+    type: 'line',
+    data: { labels, datasets: datasets.map(ds => ({ ...ds, tension: 0.35, spanGaps: true, pointRadius: 3, borderWidth: 2 })) },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { color: '#ecfff7' } } },
+      scales: {
+        x: { ticks: { color: '#9bb5aa', maxRotation: 0, autoSkip: true }, grid: { color: '#24352f' } },
+        y: { position: 'left', title: { display: Boolean(yAxisLabel), text: yAxisLabel, color: '#9bb5aa' }, ticks: { color: '#9bb5aa', callback: value => formatNum(value) }, grid: { color: '#24352f' } },
+        y1: { position: 'right', ticks: { color: '#9bb5aa', callback: value => formatNum(value) }, grid: { drawOnChartArea: false } }
+      }
+    }
+  };
+}
+
+function renderForms() {
+  document.getElementById('maintenanceCalories').value = state.profile.maintenanceCalories;
+  document.getElementById('units').value = state.profile.units;
+  ['macroDate', 'bodyDate', 'periodStartDate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = todayISO();
+  });
+  document.getElementById('periodMaintenance').value = state.profile.maintenanceCalories;
+}
+
+function renderAll() {
+  renderForms();
+  renderDashboard();
+  renderProgressStats();
+  renderMacroTable();
+  renderPeriodTable();
+}
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === name));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+  setTimeout(renderAll, 20);
+}
+
+function askConfirm(title, text, confirmText = 'Confirm') {
+  const dialog = document.getElementById('confirmDialog');
+  document.getElementById('dialogTitle').textContent = title;
+  document.getElementById('dialogText').textContent = text;
+  dialog.querySelector('.primary-btn').textContent = confirmText;
+  dialog.showModal();
+  return new Promise(resolve => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+  });
+}
+
+async function saveMacro(event) {
+  event.preventDefault();
+  const date = document.getElementById('macroDate').value;
+  const existing = state.macroLogs.find(l => l.date === date);
+  const log = {
+    id: existing?.id || uid(),
+    date,
+    calories: roundToOneDecimal(document.getElementById('calories').value),
+    protein: roundToOneDecimal(document.getElementById('protein').value),
+    carbs: roundToOneDecimal(document.getElementById('carbs').value),
+    fat: roundToOneDecimal(document.getElementById('fat').value)
+  };
+  if (existing) {
+    const ok = await askConfirm('Update existing log?', 'A macro log already exists for this date. Do you want to update it?', 'Update');
+    if (!ok) return;
+    state.macroLogs = state.macroLogs.map(l => l.id === existing.id ? log : l);
+  } else {
+    state.macroLogs.push(log);
+  }
+  event.target.reset();
+  document.getElementById('macroDate').value = todayISO();
+  saveState();
+}
+
+function saveBody(event) {
+  event.preventDefault();
+  const date = document.getElementById('bodyDate').value;
+  const weight = document.getElementById('weight').value;
+  const bodyFat = document.getElementById('bodyFat').value;
+  if (weight !== '') {
+    const existing = state.weightLogs.find(l => l.date === date);
+    const log = { id: existing?.id || uid(), date, weight: roundToOneDecimal(weight) };
+    state.weightLogs = existing ? state.weightLogs.map(l => l.id === existing.id ? log : l) : [...state.weightLogs, log];
+  }
+  if (bodyFat !== '') {
+    const existing = state.bodyFatLogs.find(l => l.date === date);
+    const log = { id: existing?.id || uid(), date, bodyFatPercentage: roundToOneDecimal(bodyFat) };
+    state.bodyFatLogs = existing ? state.bodyFatLogs.map(l => l.id === existing.id ? log : l) : [...state.bodyFatLogs, log];
+  }
+  event.target.reset();
+  document.getElementById('bodyDate').value = todayISO();
+  saveState();
+}
+
+async function startPeriod(event) {
+  event.preventDefault();
+  const current = activePeriod();
+  if (current) {
+    const ok = await askConfirm('Archive current period?', 'Starting a new period will end and archive your current period as of yesterday.', 'Archive and start');
+    if (!ok) return;
+    const yesterday = new Date(document.getElementById('periodStartDate').value);
+    yesterday.setDate(yesterday.getDate() - 1);
+    current.endDate = yesterday.toISOString().slice(0, 10);
+  }
+  state.periods.push({
+    id: uid(),
+    startDate: document.getElementById('periodStartDate').value,
+    endDate: null,
+    startWeight: roundToOneDecimal(document.getElementById('startWeight').value),
+    startBodyFatPercentage: roundToOneDecimal(document.getElementById('startBodyFat').value),
+    maintenanceCaloriesSnapshot: roundToOneDecimal(document.getElementById('periodMaintenance').value)
+  });
+  event.target.reset();
+  saveState();
+  showView('dashboard');
+}
+
+function editMacro(id) {
+  const log = state.macroLogs.find(l => l.id === id);
+  if (!log) return;
+  showView('log');
+  document.getElementById('macroDate').value = log.date;
+  document.getElementById('calories').value = log.calories;
+  document.getElementById('protein').value = log.protein;
+  document.getElementById('carbs').value = log.carbs;
+  document.getElementById('fat').value = log.fat;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteMacro(id) {
+  const ok = await askConfirm('Delete macro log?', 'This cannot be undone.', 'Delete');
+  if (!ok) return;
+  state.macroLogs = state.macroLogs.filter(l => l.id !== id);
+  saveState();
+}
+
+function saveSettings(event) {
+  event.preventDefault();
+  state.profile.maintenanceCalories = roundToOneDecimal(document.getElementById('maintenanceCalories').value);
+  state.profile.units = document.getElementById('units').value;
+  saveState();
+}
+
+function exportCSV() {
+  const sections = [];
+  const toCSV = (name, rows) => {
+    if (!rows.length) return `${name}\n`;
+    const headers = Object.keys(rows[0]);
+    const csvRows = [headers.join(','), ...rows.map(row => headers.map(h => JSON.stringify(row[h] ?? '')).join(','))];
+    return `${name}\n${csvRows.join('\n')}`;
+  };
+  sections.push(toCSV('Macro Logs', state.macroLogs));
+  sections.push(toCSV('Weight Logs', state.weightLogs));
+  sections.push(toCSV('Body Fat Logs', state.bodyFatLogs));
+  sections.push(toCSV('Periods', state.periods));
+  sections.push(toCSV('Profile', [state.profile]));
+  const blob = new Blob([sections.join('\n\n')], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `shredlog-export-${todayISO()}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+
+async function exportJSON() {
+  const fileName = `shredlog-backup-${todayISO()}.json`;
+  const jsonText = JSON.stringify(state, null, 2);
+  const blob = new Blob([jsonText], { type: 'application/json' });
+
+  // Best option on supported desktop browsers: opens a real Save As picker.
+  if ('showSaveFilePicker' in window) {
+    try {
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{
+          description: 'JSON backup file',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      alert('Backup saved successfully.');
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      console.warn('Save picker failed, falling back to download/share.', error);
+    }
+  }
+
+  // Best option on iPhone/iPad Safari: opens the iOS share sheet, where you can choose Save to Files.
+  try {
+    const file = new File([blob], fileName, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+      await navigator.share({
+        title: 'ShredLog JSON backup',
+        text: 'Save your ShredLog backup file.',
+        files: [file]
+      });
+      return;
+    }
+  } catch (error) {
+    console.warn('Share sheet failed, falling back to download.', error);
+  }
+
+  // Fallback for browsers that do not allow choosing the save location.
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+  alert('Your browser saved the backup to its default Downloads folder. To choose a folder next time, use Chrome or Edge on desktop, or Safari on iPhone and choose Save to Files from the share sheet.');
+}
+
+function parseCSVLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  values.push(current);
+  return values.map(v => v.trim());
+}
+
+function normaliseHeader(header) {
+  return header.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function csvRowsToObjects(lines) {
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).filter(Boolean).map(line => {
+    const values = parseCSVLine(line);
+    const row = {};
+    headers.forEach((header, index) => row[normaliseHeader(header)] = values[index] ?? '');
+    return row;
+  });
+}
+
+function importSimpleCSV(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+  const rows = csvRowsToObjects(lines);
+  rows.forEach(row => {
+    const date = row.date || row.day;
+    if (!date) return;
+    if (row.calories || row.kcal || row.protein || row.carbs || row.carbohydrates || row.fat) {
+      const existing = state.macroLogs.find(l => l.date === date);
+      const log = {
+        id: existing?.id || uid(),
+        date,
+        calories: roundToOneDecimal(row.calories || row.kcal),
+        protein: roundToOneDecimal(row.protein || row.proteing),
+        carbs: roundToOneDecimal(row.carbs || row.carbohydrates || row.carbohydratesg),
+        fat: roundToOneDecimal(row.fat || row.fatg)
+      };
+      state.macroLogs = existing ? state.macroLogs.map(l => l.id === existing.id ? log : l) : [...state.macroLogs, log];
+    }
+    if (row.weight) {
+      const existing = state.weightLogs.find(l => l.date === date);
+      const log = { id: existing?.id || uid(), date, weight: roundToOneDecimal(row.weight) };
+      state.weightLogs = existing ? state.weightLogs.map(l => l.id === existing.id ? log : l) : [...state.weightLogs, log];
+    }
+    if (row.bodyfat || row.bodyfatpercentage || row.bf || row.bfpercentage) {
+      const existing = state.bodyFatLogs.find(l => l.date === date);
+      const log = { id: existing?.id || uid(), date, bodyFatPercentage: roundToOneDecimal(row.bodyfat || row.bodyfatpercentage || row.bf || row.bfpercentage) };
+      state.bodyFatLogs = existing ? state.bodyFatLogs.map(l => l.id === existing.id ? log : l) : [...state.bodyFatLogs, log];
+    }
+  });
+}
+
+function importSectionedCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const sections = { 'Macro Logs': [], 'Weight Logs': [], 'Body Fat Logs': [], 'Periods': [], 'Profile': [] };
+  let section = null;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (sections[trimmed]) { section = trimmed; continue; }
+    if (section) sections[section].push(line);
+  }
+  if (!Object.values(sections).some(v => v.length)) return false;
+  const imported = defaultState();
+  const macroRows = csvRowsToObjects(sections['Macro Logs']);
+  imported.macroLogs = macroRows.map(r => ({
+    id: r.id || uid(), date: r.date, calories: roundToOneDecimal(r.calories), protein: roundToOneDecimal(r.protein), carbs: roundToOneDecimal(r.carbs), fat: roundToOneDecimal(r.fat)
+  })).filter(r => r.date);
+  const weightRows = csvRowsToObjects(sections['Weight Logs']);
+  imported.weightLogs = weightRows.map(r => ({ id: r.id || uid(), date: r.date, weight: roundToOneDecimal(r.weight) })).filter(r => r.date);
+  const bodyFatRows = csvRowsToObjects(sections['Body Fat Logs']);
+  imported.bodyFatLogs = bodyFatRows.map(r => ({ id: r.id || uid(), date: r.date, bodyFatPercentage: roundToOneDecimal(r.bodyfatpercentage) })).filter(r => r.date);
+  const periodRows = csvRowsToObjects(sections['Periods']);
+  imported.periods = periodRows.map(r => ({
+    id: r.id || uid(), startDate: r.startdate, endDate: r.enddate || null,
+    startWeight: roundToOneDecimal(r.startweight), startBodyFatPercentage: roundToOneDecimal(r.startbodyfatpercentage),
+    maintenanceCaloriesSnapshot: roundToOneDecimal(r.maintenancecaloriessnapshot)
+  })).filter(r => r.startDate);
+  const profileRows = csvRowsToObjects(sections['Profile']);
+  if (profileRows[0]) imported.profile = {
+    maintenanceCalories: roundToOneDecimal(profileRows[0].maintenancecalories) || state.profile.maintenanceCalories,
+    units: profileRows[0].units === 'kg' ? 'kg' : 'lb'
+  };
+  state = imported;
+  return true;
+}
+
+function validateImportedState(data) {
+  const base = defaultState();
+  return {
+    profile: {
+      maintenanceCalories: roundToOneDecimal(data.profile?.maintenanceCalories) || base.profile.maintenanceCalories,
+      units: data.profile?.units === 'kg' ? 'kg' : 'lb'
+    },
+    macroLogs: Array.isArray(data.macroLogs) ? data.macroLogs.filter(l => l.date).map(l => ({ id: l.id || uid(), date: l.date, calories: roundToOneDecimal(l.calories), protein: roundToOneDecimal(l.protein), carbs: roundToOneDecimal(l.carbs), fat: roundToOneDecimal(l.fat) })) : [],
+    weightLogs: Array.isArray(data.weightLogs) ? data.weightLogs.filter(l => l.date).map(l => ({ id: l.id || uid(), date: l.date, weight: roundToOneDecimal(l.weight) })) : [],
+    bodyFatLogs: Array.isArray(data.bodyFatLogs) ? data.bodyFatLogs.filter(l => l.date).map(l => ({ id: l.id || uid(), date: l.date, bodyFatPercentage: roundToOneDecimal(l.bodyFatPercentage) })) : [],
+    periods: Array.isArray(data.periods) ? data.periods.filter(p => p.startDate).map(p => ({ id: p.id || uid(), startDate: p.startDate, endDate: p.endDate || null, startWeight: roundToOneDecimal(p.startWeight), startBodyFatPercentage: roundToOneDecimal(p.startBodyFatPercentage), maintenanceCaloriesSnapshot: roundToOneDecimal(p.maintenanceCaloriesSnapshot) })) : [],
+    chartConfigs: Array.isArray(data.chartConfigs) ? data.chartConfigs.map(c => ({ id: c.id || uid(), title: c.title || 'Custom chart', metrics: Array.isArray(c.metrics) ? c.metrics.filter(m => chartMetrics.some(x => x.key === m)) : [], startDate: c.startDate || '', endDate: c.endDate || '', yUnit: c.yUnit || '', yMin: c.yMin ?? null, yMax: c.yMax ?? null })).filter(c => c.metrics.length) : []
+  };
+}
+
+async function importFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  const replace = await askConfirm('Import data?', 'This will replace your current ShredLog data. Export a backup first if you want to keep it.', 'Import');
+  if (!replace) { event.target.value = ''; return; }
+  try {
+    if (file.name.toLowerCase().endsWith('.json')) {
+      state = validateImportedState(JSON.parse(text));
+    } else {
+      const isSectioned = importSectionedCSV(text);
+      if (!isSectioned) importSimpleCSV(text);
+    }
+    saveState();
+    showView('dashboard');
+  } catch (error) {
+    alert('Import failed. Check the file format and try again.');
+  } finally {
+    event.target.value = '';
+  }
+}
+
+async function resetData() {
+  const ok = await askConfirm('Reset all app data?', 'This will permanently remove your logs, periods, and settings from this browser.', 'Reset');
+  if (!ok) return;
+  state = defaultState();
+  localStorage.removeItem(STORAGE_KEY);
+  saveState();
+}
+
+function seedSampleData() {
+  const start = new Date();
+  start.setDate(start.getDate() - 20);
+  state = defaultState();
+  state.profile = { maintenanceCalories: 2400, units: 'lb' };
+  state.periods = [{ id: uid(), startDate: start.toISOString().slice(0,10), endDate: null, startWeight: 166.5, startBodyFatPercentage: 20, maintenanceCaloriesSnapshot: 2400 }];
+  state.chartConfigs = [{ id: uid(), title: 'Calories and daily deficit', metrics: ['calories', 'deficit'], startDate: '', endDate: '', yUnit: 'kcal', yMin: null, yMax: null }];
+  for (let i = 0; i < 21; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const date = d.toISOString().slice(0,10);
+    const calories = Math.round(1900 + Math.sin(i / 2) * 170 + (i % 4) * 35);
+    state.macroLogs.push({ id: uid(), date, calories, protein: 135 + (i % 6), carbs: 190 + (i % 7) * 8, fat: 55 + (i % 5) * 3 });
+    if (i % 3 === 0) state.weightLogs.push({ id: uid(), date, weight: Number((166.5 - i * 0.22 + Math.sin(i) * 0.25).toFixed(1)) });
+    if (i % 7 === 0) state.bodyFatLogs.push({ id: uid(), date, bodyFatPercentage: Number((20 - i * 0.08).toFixed(1)) });
+  }
+  saveState();
+}
+
+function init() {
+  document.querySelectorAll('[data-nav]').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.nav)));
+  document.getElementById('macroForm').addEventListener('submit', saveMacro);
+  document.getElementById('bodyForm').addEventListener('submit', saveBody);
+  document.getElementById('periodForm').addEventListener('submit', startPeriod);
+  document.getElementById('settingsForm').addEventListener('submit', saveSettings);
+  document.getElementById('chartForm').addEventListener('submit', addCustomChart);
+  document.getElementById('exportBtn').addEventListener('click', exportCSV);
+  document.getElementById('exportJsonBtn').addEventListener('click', exportJSON);
+  document.getElementById('importFile').addEventListener('change', importFile);
+  document.getElementById('resetBtn').addEventListener('click', resetData);
+  document.getElementById('seedDataBtn').addEventListener('click', seedSampleData);
+  renderAll();
+}
+
+init();
+
+  </script>
+</body>
+</html>
