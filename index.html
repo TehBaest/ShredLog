@@ -169,6 +169,9 @@ canvas { max-height: 360px; }
           <article class="card"><span>Carbs</span><strong id="todayCarbs">—</strong></article>
           <article class="card"><span>Fat</span><strong id="todayFat">—</strong></article>
           <article class="card"><span>7-Day Avg Calories</span><strong id="avg7Calories">—</strong></article>
+          <article class="card"><span>7-Day Avg Protein</span><strong id="avg7Protein">—</strong></article>
+          <article class="card"><span>7-Day Avg Carbs</span><strong id="avg7Carbs">—</strong></article>
+          <article class="card"><span>7-Day Avg Fat</span><strong id="avg7Fat">—</strong></article>
           <article class="card"><span>Period Avg Calories</span><strong id="periodAvgCalories">—</strong></article>
           <article class="card"><span>Total Deficit</span><strong id="totalDeficit">—</strong></article>
           <article class="card"><span>Estimated Fat Loss</span><strong id="estimatedFatLoss">—</strong></article>
@@ -477,6 +480,9 @@ function renderDashboard() {
   setText('todayCarbs', todayLog ? `${formatNum(todayLog.carbs)} g` : '—');
   setText('todayFat', todayLog ? `${formatNum(todayLog.fat)} g` : '—');
   setText('avg7Calories', average(sevenLogs, 'calories') ? `${formatNum(average(sevenLogs, 'calories'))} kcal` : '—');
+  setText('avg7Protein', average(sevenLogs, 'protein') ? `${formatNum(average(sevenLogs, 'protein'))} g` : '—');
+  setText('avg7Carbs', average(sevenLogs, 'carbs') ? `${formatNum(average(sevenLogs, 'carbs'))} g` : '—');
+  setText('avg7Fat', average(sevenLogs, 'fat') ? `${formatNum(average(sevenLogs, 'fat'))} g` : '—');
   setText('periodAvgCalories', average(periodLogs, 'calories') ? `${formatNum(average(periodLogs, 'calories'))} kcal` : '—');
   setText('totalDeficit', deficit !== null ? `${formatNum(deficit)} kcal` : '—', deficit >= 0 ? 'positive' : 'warning');
   setText('estimatedFatLoss', fatLoss !== null ? `${formatNum(fatLoss, 1)} ${unitLabel()}` : '—', fatLoss >= 0 ? 'positive' : 'warning');
