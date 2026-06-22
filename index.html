@@ -118,6 +118,13 @@ canvas { max-height: 360px; }
 .positive { color: var(--green); }
 .warning { color: var(--orange); }
 .danger { color: var(--red); }
+.good { color: var(--green); }
+.slightly-out { color: var(--orange); }
+.way-out { color: var(--red); }
+.range-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.range-grid label { font-size: 0.82rem; }
+.range-grid .range-name { color: var(--text); font-weight: 800; padding-bottom: 16px; }
+.range-note { color: var(--muted); font-size: .9rem; margin-top: -4px; }
 
 .chart-builder { display: grid; gap: 14px; }
 .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -132,7 +139,7 @@ canvas { max-height: 360px; }
   .topbar, .hero-card { align-items: stretch; flex-direction: column; }
   .split-grid { grid-template-columns: 1fr; }
   .cards-grid { grid-template-columns: 1fr 1fr; }
-  .metric-grid, .axis-grid { grid-template-columns: 1fr; }
+  .metric-grid, .axis-grid, .range-grid { grid-template-columns: 1fr; }
   .card { min-height: 82px; padding: 14px; }
   .card strong { font-size: 1.2rem; }
   .bottom-nav { border-radius: 20px; }
@@ -301,6 +308,17 @@ canvas { max-height: 360px; }
           </label>
           <button class="primary-btn" type="submit">Save settings</button>
         </form>
+
+        <form id="targetSettingsForm" class="panel">
+          <div class="section-heading">
+            <h3>7-Day Average Colour Targets</h3>
+            <p>Set your target and how far the 7-day average can be under or over before it changes from green to orange to red.</p>
+          </div>
+          <p class="range-note">Calories can have a much larger green range under target. Example: target 2100, green under 500 means anything from 1600–2100 kcal can still show green.</p>
+          <div id="targetRangeSettings" class="grid"></div>
+          <button class="primary-btn" type="submit">Save colour targets</button>
+        </form>
+
         <div class="panel action-panel">
           <button id="exportBtn" class="secondary-btn">Export CSV</button>
           <button id="exportJsonBtn" class="secondary-btn">Export Backup JSON</button>
@@ -355,7 +373,17 @@ const chartMetrics = [
 
 function defaultState() {
   return {
-    profile: { maintenanceCalories: 2400, units: 'lb' },
+    profile: {
+      maintenanceCalories: 2400,
+      units: 'lb',
+      targets: { calories: 2100, protein: 140, carbs: 250, fat: 60 },
+      targetRanges: {
+        calories: { greenUnder: 500, greenOver: 100, orangeUnder: 800, orangeOver: 250 },
+        protein: { greenUnder: 10, greenOver: 20, orangeUnder: 25, orangeOver: 40 },
+        carbs: { greenUnder: 25, greenOver: 25, orangeUnder: 60, orangeOver: 60 },
+        fat: { greenUnder: 10, greenOver: 10, orangeUnder: 25, orangeOver: 25 }
+      }
+    },
     macroLogs: [],
     weightLogs: [],
     bodyFatLogs: [],
@@ -433,6 +461,39 @@ function average(logs, key) {
   return logs.reduce((sum, log) => sum + Number(log[key] || 0), 0) / logs.length;
 }
 
+function defaultTargets() {
+  return defaultState().profile.targets;
+}
+
+function defaultTargetRanges() {
+  return defaultState().profile.targetRanges;
+}
+
+function ensureTargetSettings() {
+  state.profile.targets = { ...defaultTargets(), ...(state.profile.targets || {}) };
+  const defaults = defaultTargetRanges();
+  state.profile.targetRanges = state.profile.targetRanges || {};
+  ['calories', 'protein', 'carbs', 'fat'].forEach(metric => {
+    state.profile.targetRanges[metric] = { ...defaults[metric], ...(state.profile.targetRanges[metric] || {}) };
+  });
+}
+
+function classForSevenDayAverage(metric, value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '';
+  ensureTargetSettings();
+  const target = Number(state.profile.targets?.[metric]);
+  const range = state.profile.targetRanges?.[metric];
+  if (!target || !range) return '';
+  const diff = Number(value) - target;
+  if (diff >= -Number(range.greenUnder) && diff <= Number(range.greenOver)) return 'good';
+  if (diff >= -Number(range.orangeUnder) && diff <= Number(range.orangeOver)) return 'slightly-out';
+  return 'way-out';
+}
+
+function formatSevenDayAverage(metric, value, unit) {
+  return value !== null ? `${formatNum(value)} ${unit}` : '—';
+}
+
 function deficitForLog(log, period = activePeriod()) {
   const maintenance = period?.maintenanceCaloriesSnapshot || state.profile.maintenanceCalories;
   return maintenance - Number(log.calories || 0);
@@ -479,10 +540,14 @@ function renderDashboard() {
   setText('todayProtein', todayLog ? `${formatNum(todayLog.protein)} g` : '—');
   setText('todayCarbs', todayLog ? `${formatNum(todayLog.carbs)} g` : '—');
   setText('todayFat', todayLog ? `${formatNum(todayLog.fat)} g` : '—');
-  setText('avg7Calories', average(sevenLogs, 'calories') ? `${formatNum(average(sevenLogs, 'calories'))} kcal` : '—');
-  setText('avg7Protein', average(sevenLogs, 'protein') ? `${formatNum(average(sevenLogs, 'protein'))} g` : '—');
-  setText('avg7Carbs', average(sevenLogs, 'carbs') ? `${formatNum(average(sevenLogs, 'carbs'))} g` : '—');
-  setText('avg7Fat', average(sevenLogs, 'fat') ? `${formatNum(average(sevenLogs, 'fat'))} g` : '—');
+  const avg7CaloriesValue = average(sevenLogs, 'calories');
+  setText('avg7Calories', formatSevenDayAverage('calories', avg7CaloriesValue, 'kcal'), classForSevenDayAverage('calories', avg7CaloriesValue));
+  const avg7ProteinValue = average(sevenLogs, 'protein');
+  setText('avg7Protein', formatSevenDayAverage('protein', avg7ProteinValue, 'g'), classForSevenDayAverage('protein', avg7ProteinValue));
+  const avg7CarbsValue = average(sevenLogs, 'carbs');
+  setText('avg7Carbs', formatSevenDayAverage('carbs', avg7CarbsValue, 'g'), classForSevenDayAverage('carbs', avg7CarbsValue));
+  const avg7FatValue = average(sevenLogs, 'fat');
+  setText('avg7Fat', formatSevenDayAverage('fat', avg7FatValue, 'g'), classForSevenDayAverage('fat', avg7FatValue));
   setText('periodAvgCalories', average(periodLogs, 'calories') ? `${formatNum(average(periodLogs, 'calories'))} kcal` : '—');
   setText('totalDeficit', deficit !== null ? `${formatNum(deficit)} kcal` : '—', deficit >= 0 ? 'positive' : 'warning');
   setText('estimatedFatLoss', fatLoss !== null ? `${formatNum(fatLoss, 1)} ${unitLabel()}` : '—', fatLoss >= 0 ? 'positive' : 'warning');
@@ -616,10 +681,14 @@ async function deleteCustomChart(id) {
 function renderProgressStats() {
   const logs = rolling7Logs();
   const avgDeficit = logs.length ? logs.reduce((sum, l) => sum + deficitForLog(l), 0) / logs.length : null;
-  setText('sevenCalories', average(logs, 'calories') ? `${formatNum(average(logs, 'calories'))} kcal` : '—');
-  setText('sevenProtein', average(logs, 'protein') ? `${formatNum(average(logs, 'protein'))} g` : '—');
-  setText('sevenCarbs', average(logs, 'carbs') ? `${formatNum(average(logs, 'carbs'))} g` : '—');
-  setText('sevenFat', average(logs, 'fat') ? `${formatNum(average(logs, 'fat'))} g` : '—');
+  const sevenCaloriesValue = average(logs, 'calories');
+  setText('sevenCalories', formatSevenDayAverage('calories', sevenCaloriesValue, 'kcal'), classForSevenDayAverage('calories', sevenCaloriesValue));
+  const sevenProteinValue = average(logs, 'protein');
+  setText('sevenProtein', formatSevenDayAverage('protein', sevenProteinValue, 'g'), classForSevenDayAverage('protein', sevenProteinValue));
+  const sevenCarbsValue = average(logs, 'carbs');
+  setText('sevenCarbs', formatSevenDayAverage('carbs', sevenCarbsValue, 'g'), classForSevenDayAverage('carbs', sevenCarbsValue));
+  const sevenFatValue = average(logs, 'fat');
+  setText('sevenFat', formatSevenDayAverage('fat', sevenFatValue, 'g'), classForSevenDayAverage('fat', sevenFatValue));
   setText('sevenDeficit', avgDeficit !== null ? `${formatNum(avgDeficit)} kcal/day` : '—', avgDeficit >= 0 ? 'positive' : 'warning');
   renderMacroChart();
   renderBodyChart();
@@ -735,6 +804,29 @@ function lineChartConfig(labels, datasets, yAxisLabel = '') {
   };
 }
 
+function targetLabel(metric) {
+  return { calories: 'Calories (kcal)', protein: 'Protein (g)', carbs: 'Carbs (g)', fat: 'Fat (g)' }[metric] || metric;
+}
+
+function renderTargetRangeSettings() {
+  ensureTargetSettings();
+  const wrap = document.getElementById('targetRangeSettings');
+  if (!wrap) return;
+  wrap.innerHTML = ['calories', 'protein', 'carbs', 'fat'].map(metric => {
+    const target = state.profile.targets[metric];
+    const r = state.profile.targetRanges[metric];
+    return `
+      <div class="range-grid">
+        <div class="range-name">${targetLabel(metric)}</div>
+        <label>Target<input type="number" id="target-${metric}" inputmode="decimal" step="0.1" min="0" value="${target}" /></label>
+        <label>Green under<input type="number" id="greenUnder-${metric}" inputmode="decimal" step="0.1" min="0" value="${r.greenUnder}" /></label>
+        <label>Green over<input type="number" id="greenOver-${metric}" inputmode="decimal" step="0.1" min="0" value="${r.greenOver}" /></label>
+        <label>Orange under<input type="number" id="orangeUnder-${metric}" inputmode="decimal" step="0.1" min="0" value="${r.orangeUnder}" /></label>
+        <label>Orange over<input type="number" id="orangeOver-${metric}" inputmode="decimal" step="0.1" min="0" value="${r.orangeOver}" /></label>
+      </div>`;
+  }).join('');
+}
+
 function renderForms() {
   document.getElementById('maintenanceCalories').value = state.profile.maintenanceCalories;
   document.getElementById('units').value = state.profile.units;
@@ -743,6 +835,7 @@ function renderForms() {
     if (el && !el.value) el.value = todayISO();
   });
   document.getElementById('periodMaintenance').value = state.profile.maintenanceCalories;
+  renderTargetRangeSettings();
 }
 
 function renderAll() {
@@ -860,6 +953,23 @@ function saveSettings(event) {
   event.preventDefault();
   state.profile.maintenanceCalories = roundToOneDecimal(document.getElementById('maintenanceCalories').value);
   state.profile.units = document.getElementById('units').value;
+  saveState();
+}
+
+function saveTargetSettings(event) {
+  event.preventDefault();
+  ensureTargetSettings();
+  ['calories', 'protein', 'carbs', 'fat'].forEach(metric => {
+    state.profile.targets[metric] = roundToOneDecimal(document.getElementById(`target-${metric}`).value);
+    state.profile.targetRanges[metric] = {
+      greenUnder: roundToOneDecimal(document.getElementById(`greenUnder-${metric}`).value),
+      greenOver: roundToOneDecimal(document.getElementById(`greenOver-${metric}`).value),
+      orangeUnder: roundToOneDecimal(document.getElementById(`orangeUnder-${metric}`).value),
+      orangeOver: roundToOneDecimal(document.getElementById(`orangeOver-${metric}`).value)
+    };
+    if (state.profile.targetRanges[metric].orangeUnder < state.profile.targetRanges[metric].greenUnder) state.profile.targetRanges[metric].orangeUnder = state.profile.targetRanges[metric].greenUnder;
+    if (state.profile.targetRanges[metric].orangeOver < state.profile.targetRanges[metric].greenOver) state.profile.targetRanges[metric].orangeOver = state.profile.targetRanges[metric].greenOver;
+  });
   saveState();
 }
 
@@ -1034,6 +1144,7 @@ function importSectionedCSV(text) {
   })).filter(r => r.startDate);
   const profileRows = csvRowsToObjects(sections['Profile']);
   if (profileRows[0]) imported.profile = {
+    ...defaultState().profile,
     maintenanceCalories: roundToOneDecimal(profileRows[0].maintenancecalories) || state.profile.maintenanceCalories,
     units: profileRows[0].units === 'kg' ? 'kg' : 'lb'
   };
@@ -1046,7 +1157,14 @@ function validateImportedState(data) {
   return {
     profile: {
       maintenanceCalories: roundToOneDecimal(data.profile?.maintenanceCalories) || base.profile.maintenanceCalories,
-      units: data.profile?.units === 'kg' ? 'kg' : 'lb'
+      units: data.profile?.units === 'kg' ? 'kg' : 'lb',
+      targets: { ...base.profile.targets, ...(data.profile?.targets || {}) },
+      targetRanges: {
+        calories: { ...base.profile.targetRanges.calories, ...(data.profile?.targetRanges?.calories || {}) },
+        protein: { ...base.profile.targetRanges.protein, ...(data.profile?.targetRanges?.protein || {}) },
+        carbs: { ...base.profile.targetRanges.carbs, ...(data.profile?.targetRanges?.carbs || {}) },
+        fat: { ...base.profile.targetRanges.fat, ...(data.profile?.targetRanges?.fat || {}) }
+      }
     },
     macroLogs: Array.isArray(data.macroLogs) ? data.macroLogs.filter(l => l.date).map(l => ({ id: l.id || uid(), date: l.date, calories: roundToOneDecimal(l.calories), protein: roundToOneDecimal(l.protein), carbs: roundToOneDecimal(l.carbs), fat: roundToOneDecimal(l.fat) })) : [],
     weightLogs: Array.isArray(data.weightLogs) ? data.weightLogs.filter(l => l.date).map(l => ({ id: l.id || uid(), date: l.date, weight: roundToOneDecimal(l.weight) })) : [],
@@ -1090,7 +1208,7 @@ function seedSampleData() {
   const start = new Date();
   start.setDate(start.getDate() - 20);
   state = defaultState();
-  state.profile = { maintenanceCalories: 2400, units: 'lb' };
+  state.profile = { ...defaultState().profile, maintenanceCalories: 2400, units: 'lb' };
   state.periods = [{ id: uid(), startDate: start.toISOString().slice(0,10), endDate: null, startWeight: 166.5, startBodyFatPercentage: 20, maintenanceCaloriesSnapshot: 2400 }];
   state.chartConfigs = [{ id: uid(), title: 'Calories and daily deficit', metrics: ['calories', 'deficit'], startDate: '', endDate: '', yUnit: 'kcal', yMin: null, yMax: null }];
   for (let i = 0; i < 21; i++) {
@@ -1106,11 +1224,13 @@ function seedSampleData() {
 }
 
 function init() {
+  ensureTargetSettings();
   document.querySelectorAll('[data-nav]').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.nav)));
   document.getElementById('macroForm').addEventListener('submit', saveMacro);
   document.getElementById('bodyForm').addEventListener('submit', saveBody);
   document.getElementById('periodForm').addEventListener('submit', startPeriod);
   document.getElementById('settingsForm').addEventListener('submit', saveSettings);
+  document.getElementById('targetSettingsForm').addEventListener('submit', saveTargetSettings);
   document.getElementById('chartForm').addEventListener('submit', addCustomChart);
   document.getElementById('exportBtn').addEventListener('click', exportCSV);
   document.getElementById('exportJsonBtn').addEventListener('click', exportJSON);
